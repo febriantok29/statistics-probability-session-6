@@ -1,110 +1,58 @@
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy import stats
-from scipy.stats import chi2_contingency
+import pandas as pd
+import tkinter as tk
+from tkinter import ttk
 
-plt.tight_layout()
 
-# Uji `T` Satu Sampel
-print("Uji T Satu Sampel")
-data = [45, 47, 49, 52, 50, 48, 47, 51]
+master = pd.read_excel("laptop_prices.xlsx")
 
-t_statistic, p_value = stats.ttest_1samp(data, 50)
+master.info()
 
-print(f"Nilai statistik t: {t_statistic}")
-print(f"Nilai p-value: {p_value}")
+root = tk.Tk()
+root.title("Analisa Gaji Karyawan")
+root.geometry("800x400")
 
-alpha = 0.05
-if p_value < alpha:
-    print("H0 ditolak, Rata-rata berbeda secara signifikan dari 50")
-else:
-    print("H0 diterima, Rata-rata sama dengan 50")
+# Labels
+tk.Label(root, text="Nama:").grid(row=0, column=0, padx=5, pady=5)
+tk.Label(root, text="Divisi:").grid(row=1, column=0, padx=5, pady=5)
+tk.Label(root, text="Gaji (Juta):").grid(row=2, column=0, padx=5, pady=5)
+tk.Label(root, text="Jabatan:").grid(row=3, column=0, padx=5, pady=5)
+tk.Label(root, text="Lama Bekerja (tahun):").grid(row=4, column=0, padx=5, pady=5)
+tk.Label(root, text="Jenis Kelamin (L/P):").grid(row=5, column=0, padx=5, pady=5)
 
-# Buat Diagram Garis Dari Uji T Satu Sampel
-x_single_sample = np.arange(1, len(data) + 1)
-plt.plot(
-    x_single_sample,
-    data,
-    marker="o",
-    linestyle="-",
-    color="b",
-    label="Data Satu Sampel",
-)
-plt.axhline(y=50, color="r", linestyle="--", label="Rata-rata 50")
-plt.title("Uji T Satu Sampel")
-plt.xlabel("Pengamatan")
-plt.ylabel("Nilai")
-plt.grid(True)
-plt.legend()
-plt.show()
-print("--- End of Uji T Satu Sampel ---")
+# Entry Fields
+name_entry = tk.Entry(root)
+name_entry.grid(row=0, column=1, padx=5, pady=5)
 
-# Uji `T` Dua Sampel
-print("Uji T Dua Sampel")
-first_data = [50, 52, 54, 48, 49, 51]
-second_data = [45, 47, 46, 44, 48, 47]
+division_combo = ttk.Combobox(root, values=["Finance", "HR", "IT", "Marketing"])
+division_combo.grid(row=1, column=1, padx=5, pady=5)
 
-t_statistic, p_value = stats.ttest_ind(first_data, second_data)
+salary_entry = tk.Entry(root)
+salary_entry.grid(row=2, column=1, padx=5, pady=5)
 
-print(f"Nilai statistik t: {t_statistic}")
-print(f"Nilai p-value: {p_value}")
+position_combo = ttk.Combobox(root, values=["Staf", "Manager", "Supervisor"])
+position_combo.grid(row=3, column=1, padx=5, pady=5)
 
-if p_value < alpha:
-    print("H0 ditolak, Rata-rata dua kelompok berbeda secara signifikan")
-else:
-    print("H0 diterima, Rata-rata dua kelompok sama")
+work_years_entry = tk.Entry(root)
+work_years_entry.grid(row=4, column=1, padx=5, pady=5)
 
-# Buat Diagram Garis Dari Uji T Dua Sampel
-x_two_sample = np.arange(1, len(first_data) + 1)
-plt.plot(
-    x_two_sample, first_data, marker="o", linestyle="-", color="g", label="Kelompok 1"
-)
-plt.plot(
-    x_two_sample, second_data, marker="o", linestyle="-", color="m", label="Kelompok 2"
-)
-plt.axhline(y=50, color="r", linestyle="--", label="Rata-rata 50")
-plt.title("Uji T Dua Sampel")
-plt.xlabel("Pengamatan")
-plt.ylabel("Nilai")
-plt.grid(True)
-plt.legend()
-plt.show()
-print("-- End of Uji T Dua Sampel --")
+gender_entry = tk.Entry(root)
+gender_entry.grid(row=5, column=1, padx=5, pady=5)
 
-# Uji Chi-Square
-print("Uji Chi-Square")
-first_data = [10, 10, 20]
-second_data = [20, 20, 30]
+tk.Button(root, text="Tambah Data").grid(row=6, column=0, padx=5, pady=5)
+tk.Button(root, text="Perbarui Data").grid(row=6, column=1, padx=5, pady=5)
+tk.Button(root, text="Hapus Data").grid(row=6, column=2, padx=5, pady=5)
 
-observed = np.array([first_data, second_data])
+columns = ("Nama", "Divisi", "Gaji", "Jabatan", "Lama_Bekerja", "Jenis_Kelamin")
+tree = ttk.Treeview(root, columns=columns, show="headings")
 
-chi2, p, _, __ = chi2_contingency(observed)
+for col in columns:
+    tree.heading(col, text=col)
+    tree.column(col, width=100)
 
-print(f"Nilai Chi-Square: {chi2}")
-print(f"Nilai p-value: {p}")
+tree.grid(row=7, column=0, columnspan=3, padx=5, pady=5)
 
-if p < alpha:
-    print("H0 ditolak, Ada hubungan signifikan antara variabel")
-else:
-    print("H0 diterima, Tidak ada hubungan antara variabel")
+tk.Button(root, text="Visualisasi Data").grid(row=8, column=0, padx=5, pady=5)
+tk.Button(root, text="Hitung Probabilitas").grid(row=8, column=1, padx=5, pady=5)
+tk.Button(root, text="Uji Hipotesis").grid(row=8, column=2, padx=5, pady=5)
 
-# Buat Diagram Garis Dari Uji Chi-Square
-categories = ["Kategori 1", "Kategori 2", "Kategori 3"]
-x_categories = np.arange(1, len(categories) + 1)
-
-plt.plot(
-    x_categories, observed[0], marker="o", linestyle="-", color="c", label="Kelompok 1"
-)
-plt.plot(
-    x_categories, observed[1], marker="o", linestyle="-", color="y", label="Kelompok 2"
-)
-
-plt.xlabel("Kategori")
-plt.ylabel("Frekuensi")
-plt.title("Uji Chi-Square")
-plt.grid(True)
-plt.xticks(x_categories, categories)
-plt.legend()
-plt.show()
-
-print("-- End of Uji Chi-Square --")
+root.mainloop()
