@@ -1,25 +1,40 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-from tkinter import messagebox, ttk, StringVar, Tk, Frame, Label, Entry, Button, END
+from tkinter import messagebox, ttk, Tk, Frame, Label, Entry, Button, END
+
 
 # Load data from Excel
-df = pd.read_excel("data.xlsx")
+def load_data():
+    try:
+        df = pd.read_excel("data.xlsx")
+        return df
+    except FileNotFoundError:
+        messagebox.showerror(
+            "Error",
+            "File Excel tidak ditemukan. Pastikan file berada di direktori yang benar.",
+        )
+        return pd.DataFrame()
+
+
+laptop_df = load_data()
+laptop_data = laptop_df.to_dict("records")
 
 # Extract unique values for dropdowns
-company_options = df["Company"].dropna().unique().tolist()
-type_options = df["Type"].dropna().unique().tolist()
-os_options = df["OS"].dropna().unique().tolist()
-touchscreen_options = df["Touchscreen"].dropna().unique().tolist()
-ips_panel_options = df["IPS Panel"].dropna().unique().tolist()
-retina_display_options = df["Retina Display"].dropna().unique().tolist()
-cpu_company_options = df["CPU Company"].dropna().unique().tolist()
-primary_storage_type_options = df["Primary Storage Type"].dropna().unique().tolist()
-secondary_storage_type_options = df["Secondary Storage Type"].dropna().unique().tolist()
-gpu_company_options = df["GPU Company"].dropna().unique().tolist()
-
-# In-memory data storage
-laptop_data = df.to_dict("records")
+company_options = laptop_df["Company"].dropna().unique().tolist()
+type_options = laptop_df["Type"].dropna().unique().tolist()
+os_options = laptop_df["OS"].dropna().unique().tolist()
+touchscreen_options = laptop_df["Touchscreen"].dropna().unique().tolist()
+ips_panel_options = laptop_df["IPS Panel"].dropna().unique().tolist()
+retina_display_options = laptop_df["Retina Display"].dropna().unique().tolist()
+cpu_company_options = laptop_df["CPU Company"].dropna().unique().tolist()
+primary_storage_type_options = (
+    laptop_df["Primary Storage Type"].dropna().unique().tolist()
+)
+secondary_storage_type_options = (
+    laptop_df["Secondary Storage Type"].dropna().unique().tolist()
+)
+gpu_company_options = laptop_df["GPU Company"].dropna().unique().tolist()
 
 
 # Utility functions
@@ -53,7 +68,6 @@ def clear_input_fields():
 
 def save_to_excel():
     """Save the in-memory data to the Excel file."""
-    global laptop_data
     df = pd.DataFrame(laptop_data)
     df.to_excel("data.xlsx", index=False)
 
@@ -88,15 +102,14 @@ def add_laptop():
         "GPU Model": entry_gpu_model.get(),
     }
 
-    # Validate input
     if not all(new_laptop.values()):
-        messagebox.showerror("Input Error", "All fields must be filled!")
+        messagebox.showerror("Input Error", "Semua kolom harus diisi!")
         return
 
     laptop_data.append(new_laptop)
     clear_input_fields()
     messagebox.showinfo(
-        "Data Added", f"Laptop '{new_laptop['Product']}' has been added successfully!"
+        "Data Ditambahkan", f"Laptop '{new_laptop['Product']}' berhasil ditambahkan!"
     )
     display_laptop_data()
     save_to_excel()
@@ -104,7 +117,7 @@ def add_laptop():
 
 def display_laptop_data():
     """Display laptop data in the table."""
-    tree.delete(*tree.get_children())  # Clear existing data in the table
+    tree.delete(*tree.get_children())
     for record in laptop_data:
         tree.insert(
             "",
@@ -143,13 +156,12 @@ def update_laptop():
     selected_item = tree.selection()
 
     if not selected_item:
-        messagebox.showerror("Update Error", "Please select a laptop to update!")
+        messagebox.showerror("Update Error", "Pilih laptop yang ingin diperbarui!")
         return
 
     item = tree.item(selected_item)
     selected_product = item["values"][1]
 
-    # Fill input fields with selected data
     entry_company.delete(0, END)
     entry_company.insert(0, item["values"][0])
     entry_product.delete(0, END)
@@ -199,7 +211,6 @@ def update_laptop():
     entry_gpu_model.delete(0, END)
     entry_gpu_model.insert(0, item["values"][23])
 
-    # Remove the selected item from the list
     global laptop_data
     laptop_data = [
         record for record in laptop_data if record["Product"] != selected_product
@@ -212,7 +223,7 @@ def delete_laptop():
     selected_item = tree.selection()
 
     if not selected_item:
-        messagebox.showerror("Delete Error", "Please select a laptop to delete!")
+        messagebox.showerror("Delete Error", "Pilih laptop yang ingin dihapus!")
         return
 
     item = tree.item(selected_item)
@@ -223,7 +234,7 @@ def delete_laptop():
         record for record in laptop_data if record["Product"] != selected_product
     ]
     messagebox.showinfo(
-        "Delete Success", f"Laptop '{selected_product}' has been deleted!"
+        "Delete Success", f"Laptop '{selected_product}' berhasil dihapus!"
     )
     display_laptop_data()
     save_to_excel()
@@ -235,114 +246,78 @@ def search_laptop():
     filtered_data = [
         record
         for record in laptop_data
-        if query in record["Company"].lower() or query in record["Product"].lower()
+        if any(query in str(value).lower() for value in record.values())
     ]
-    tree.delete(*tree.get_children())  # Clear existing data in the table
+    
+    tree.delete(*tree.get_children())
     for record in filtered_data:
         tree.insert(
             "",
             "end",
-            values=(
-                record["Company"],
-                record["Product"],
-                record["Type"],
-                record["Screen Size (Inches)"],
-                record["RAM (GB)"],
-                record["OS"],
-                record["Weight (KG)"],
-                record["Price (Euros)"],
-                record["Price (IDR)"],
-                record["Screen"],
-                record["Screen Width (Pixels)"],
-                record["Screen Height (Pixels)"],
-                record["Touchscreen"],
-                record["IPS Panel"],
-                record["Retina Display"],
-                record["CPU Company"],
-                record["CPU Frequency"],
-                record["CPU Model"],
-                record["Primary Storage (GB)"],
-                record["Secondary Storage (GB)"],
-                record["Primary Storage Type"],
-                record["Secondary Storage Type"],
-                record["GPU Company"],
-                record["GPU Model"],
-            ),
+            values=tuple(record[col] for col in tree["columns"]),
         )
 
 
 def perform_analysis():
     """Perform descriptive and ANOVA analysis on laptop data."""
     if not laptop_data:
-        messagebox.showerror("Data Error", "No data available for analysis!")
+        messagebox.showerror("Data Error", "Tidak ada data untuk analisis!")
         return
 
     df = pd.DataFrame(laptop_data)
     avg_price_by_company = df.groupby("Company")["Price (IDR)"].mean()
 
-    # Group data by Company
     grouped_data = [
         df[df["Company"] == company]["Price (IDR)"]
         for company in df["Company"].unique()
     ]
 
-    # Validate if there are at least two groups for ANOVA
     if len(grouped_data) < 2:
         messagebox.showerror(
             "Analysis Error",
-            "ANOVA requires at least two groups of data. Add more data with different companies!",
+            "ANOVA membutuhkan setidaknya dua grup data. Tambahkan lebih banyak data dengan perusahaan yang berbeda!",
         )
         return
 
-    # Perform ANOVA
     f_stat, p_value = stats.f_oneway(*grouped_data)
 
     analysis_result = (
-        "Significant differences in price by company."
+        "Perbedaan signifikan dalam harga berdasarkan perusahaan."
         if p_value < 0.05
-        else "No significant differences in price by company."
+        else "Tidak ada perbedaan signifikan dalam harga berdasarkan perusahaan."
     )
 
-    # Format average prices to be more readable and add "Rp" prefix
     avg_price_by_company_formatted = avg_price_by_company.apply(
         lambda x: f"Rp {x:,.2f}"
     )
 
-    # Display analysis result in a message box
     messagebox.showinfo(
-        "Analysis Result",
-        f"Average Price by Company:\n{avg_price_by_company_formatted}\n\n"
-        f"ANOVA Result:\nF-statistic: {f_stat:.2f}, p-value: {p_value:.4f}\n\n{analysis_result}",
+        "Hasil Analisis",
+        f"Rata-rata Harga berdasarkan Perusahaan:\n{avg_price_by_company_formatted}\n\n"
+        f"Hasil ANOVA:\nF-statistik: {f_stat:.2f}, p-value: {p_value:.4f}\n\n{analysis_result}",
     )
 
-    # Plot Bar Chart and Scatter Plot together
-    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(14, 6))
+    _, axes = plt.subplots(nrows=1, ncols=2, figsize=(14, 6))
 
-    # Bar Chart
     avg_price_by_company.plot(kind="bar", color="skyblue", ax=axes[0])
-    axes[0].set_title("Average Price by Company")
-    axes[0].set_xlabel("Company")
-    axes[0].set_ylabel("Average Price (IDR)")
+    axes[0].set_title("Rata-rata Harga berdasarkan Perusahaan")
+    axes[0].set_xlabel("Perusahaan")
+    axes[0].set_ylabel("Rata-rata Harga (IDR)")
     axes[0].tick_params(axis="x", rotation=45)
     axes[0].grid(axis="y")
-    axes[0].get_yaxis().get_major_formatter().set_scientific(
-        False
-    )  # Disable scientific notation
+    axes[0].get_yaxis().get_major_formatter().set_scientific(False)
     axes[0].get_yaxis().set_major_formatter(
-        plt.FuncFormatter(lambda x, loc: f"Rp {x:,.0f}")
+        plt.FuncFormatter(lambda x, _: f"Rp {x:,.0f}")
     )
 
-    # Scatter Plot for Price vs RAM
     axes[1].scatter(df["RAM (GB)"], df["Price (IDR)"], alpha=0.6, color="green")
-    axes[1].set_title("Relationship between RAM and Price")
+    axes[1].set_title("Hubungan antara RAM dan Harga")
     axes[1].set_xlabel("RAM (GB)")
-    axes[1].set_ylabel("Price (IDR)")
+    axes[1].set_ylabel("Harga (IDR)")
     axes[1].grid(True)
-    axes[1].get_yaxis().get_major_formatter().set_scientific(
-        False
-    )  # Disable scientific notation
+    axes[1].get_yaxis().get_major_formatter().set_scientific(False)
     axes[1].get_yaxis().set_major_formatter(
-        plt.FuncFormatter(lambda x, loc: f"Rp {x:,.0f}")
+        plt.FuncFormatter(lambda x, _: f"Rp {x:,.0f}")
     )
 
     plt.tight_layout()
@@ -355,7 +330,10 @@ def sort_column(tree, col, reverse):
 
     # Try to convert data to float for numeric sorting
     try:
-        data.sort(key=lambda t: float(t[0]), reverse=reverse)
+        data.sort(
+            key=lambda t: float(t[0].replace("Rp ", "").replace(",", "")),
+            reverse=reverse,
+        )
     except ValueError:
         data.sort(reverse=reverse)
 
@@ -367,26 +345,24 @@ def sort_column(tree, col, reverse):
 
 # GUI setup
 root = Tk()
-root.title("Laptop Catalog Management")
+root.title("Manajemen Katalog Laptop")
 
-# Input form
 frame_input = Frame(root)
 frame_input.pack(pady=20)
 
-# Create input fields in a grid layout with more horizontal fields
-Label(frame_input, text="Company:").grid(row=0, column=0, padx=10, pady=5)
+Label(frame_input, text="Perusahaan:").grid(row=0, column=0, padx=10, pady=5)
 entry_company = ttk.Combobox(frame_input, values=company_options)
 entry_company.grid(row=0, column=1, padx=10, pady=5)
 
-Label(frame_input, text="Product:").grid(row=0, column=2, padx=10, pady=5)
+Label(frame_input, text="Produk:").grid(row=0, column=2, padx=10, pady=5)
 entry_product = Entry(frame_input)
 entry_product.grid(row=0, column=3, padx=10, pady=5)
 
-Label(frame_input, text="Type:").grid(row=0, column=4, padx=10, pady=5)
+Label(frame_input, text="Tipe:").grid(row=0, column=4, padx=10, pady=5)
 entry_type = ttk.Combobox(frame_input, values=type_options)
 entry_type.grid(row=0, column=5, padx=10, pady=5)
 
-Label(frame_input, text="Screen Size (Inches):").grid(row=1, column=0, padx=10, pady=5)
+Label(frame_input, text="Ukuran Layar (Inci):").grid(row=1, column=0, padx=10, pady=5)
 entry_screen_size = Entry(frame_input)
 entry_screen_size.grid(row=1, column=1, padx=10, pady=5)
 
@@ -398,73 +374,75 @@ Label(frame_input, text="OS:").grid(row=1, column=4, padx=10, pady=5)
 entry_os = ttk.Combobox(frame_input, values=os_options)
 entry_os.grid(row=1, column=5, padx=10, pady=5)
 
-Label(frame_input, text="Weight (KG):").grid(row=2, column=0, padx=10, pady=5)
+Label(frame_input, text="Berat (KG):").grid(row=2, column=0, padx=10, pady=5)
 entry_weight = Entry(frame_input)
 entry_weight.grid(row=2, column=1, padx=10, pady=5)
 
-Label(frame_input, text="Price (Euros):").grid(row=2, column=2, padx=10, pady=5)
+Label(frame_input, text="Harga (Euro):").grid(row=2, column=2, padx=10, pady=5)
 entry_price_euros = Entry(frame_input)
 entry_price_euros.grid(row=2, column=3, padx=10, pady=5)
 
-Label(frame_input, text="Price (IDR):").grid(row=2, column=4, padx=10, pady=5)
+Label(frame_input, text="Harga (IDR):").grid(row=2, column=4, padx=10, pady=5)
 entry_price_idr = Entry(frame_input)
 entry_price_idr.grid(row=2, column=5, padx=10, pady=5)
 
-Label(frame_input, text="Screen:").grid(row=3, column=0, padx=10, pady=5)
+Label(frame_input, text="Layar:").grid(row=3, column=0, padx=10, pady=5)
 entry_screen = Entry(frame_input)
 entry_screen.grid(row=3, column=1, padx=10, pady=5)
 
-Label(frame_input, text="Screen Width (Pixels):").grid(row=3, column=2, padx=10, pady=5)
+Label(frame_input, text="Lebar Layar (Piksel):").grid(row=3, column=2, padx=10, pady=5)
 entry_screen_width = Entry(frame_input)
 entry_screen_width.grid(row=3, column=3, padx=10, pady=5)
 
-Label(frame_input, text="Screen Height (Pixels):").grid(
-    row=3, column=4, padx=10, pady=5
-)
+Label(frame_input, text="Tinggi Layar (Piksel):").grid(row=3, column=4, padx=10, pady=5)
 entry_screen_height = Entry(frame_input)
 entry_screen_height.grid(row=3, column=5, padx=10, pady=5)
 
-Label(frame_input, text="Touchscreen:").grid(row=4, column=0, padx=10, pady=5)
+Label(frame_input, text="Layar Sentuh:").grid(row=4, column=0, padx=10, pady=5)
 entry_touchscreen = ttk.Combobox(frame_input, values=touchscreen_options)
 entry_touchscreen.grid(row=4, column=1, padx=10, pady=5)
 
-Label(frame_input, text="IPS Panel:").grid(row=4, column=2, padx=10, pady=5)
+Label(frame_input, text="Panel IPS:").grid(row=4, column=2, padx=10, pady=5)
 entry_ips_panel = ttk.Combobox(frame_input, values=ips_panel_options)
 entry_ips_panel.grid(row=4, column=3, padx=10, pady=5)
 
-Label(frame_input, text="Retina Display:").grid(row=4, column=4, padx=10, pady=5)
+Label(frame_input, text="Layar Retina:").grid(row=4, column=4, padx=10, pady=5)
 entry_retina_display = ttk.Combobox(frame_input, values=retina_display_options)
 entry_retina_display.grid(row=4, column=5, padx=10, pady=5)
 
-Label(frame_input, text="CPU Company:").grid(row=5, column=0, padx=10, pady=5)
+Label(frame_input, text="Perusahaan CPU:").grid(row=5, column=0, padx=10, pady=5)
 entry_cpu_company = ttk.Combobox(frame_input, values=cpu_company_options)
 entry_cpu_company.grid(row=5, column=1, padx=10, pady=5)
 
-Label(frame_input, text="CPU Frequency:").grid(row=5, column=2, padx=10, pady=5)
+Label(frame_input, text="Frekuensi CPU:").grid(row=5, column=2, padx=10, pady=5)
 entry_cpu_frequency = Entry(frame_input)
 entry_cpu_frequency.grid(row=5, column=3, padx=10, pady=5)
 
-Label(frame_input, text="CPU Model:").grid(row=5, column=4, padx=10, pady=5)
+Label(frame_input, text="Model CPU:").grid(row=5, column=4, padx=10, pady=5)
 entry_cpu_model = Entry(frame_input)
 entry_cpu_model.grid(row=5, column=5, padx=10, pady=5)
 
-Label(frame_input, text="Primary Storage (GB):").grid(row=6, column=0, padx=10, pady=5)
+Label(frame_input, text="Penyimpanan Utama (GB):").grid(
+    row=6, column=0, padx=10, pady=5
+)
 entry_primary_storage = Entry(frame_input)
 entry_primary_storage.grid(row=6, column=1, padx=10, pady=5)
 
-Label(frame_input, text="Secondary Storage (GB):").grid(
+Label(frame_input, text="Penyimpanan Sekunder (GB):").grid(
     row=6, column=2, padx=10, pady=5
 )
 entry_secondary_storage = Entry(frame_input)
 entry_secondary_storage.grid(row=6, column=3, padx=10, pady=5)
 
-Label(frame_input, text="Primary Storage Type:").grid(row=6, column=4, padx=10, pady=5)
+Label(frame_input, text="Tipe Penyimpanan Utama:").grid(
+    row=6, column=4, padx=10, pady=5
+)
 entry_primary_storage_type = ttk.Combobox(
     frame_input, values=primary_storage_type_options
 )
 entry_primary_storage_type.grid(row=6, column=5, padx=10, pady=5)
 
-Label(frame_input, text="Secondary Storage Type:").grid(
+Label(frame_input, text="Tipe Penyimpanan Sekunder:").grid(
     row=7, column=0, padx=10, pady=5
 )
 entry_secondary_storage_type = ttk.Combobox(
@@ -472,11 +450,11 @@ entry_secondary_storage_type = ttk.Combobox(
 )
 entry_secondary_storage_type.grid(row=7, column=1, padx=10, pady=5)
 
-Label(frame_input, text="GPU Company:").grid(row=7, column=2, padx=10, pady=5)
+Label(frame_input, text="Perusahaan GPU:").grid(row=7, column=2, padx=10, pady=5)
 entry_gpu_company = ttk.Combobox(frame_input, values=gpu_company_options)
 entry_gpu_company.grid(row=7, column=3, padx=10, pady=5)
 
-Label(frame_input, text="GPU Model:").grid(row=7, column=4, padx=10, pady=5)
+Label(frame_input, text="Model GPU:").grid(row=7, column=4, padx=10, pady=5)
 entry_gpu_model = Entry(frame_input)
 entry_gpu_model.grid(row=7, column=5, padx=10, pady=5)
 
@@ -484,23 +462,25 @@ entry_gpu_model.grid(row=7, column=5, padx=10, pady=5)
 frame_search = Frame(root)
 frame_search.pack(pady=10)
 
-Label(frame_search, text="Search:").pack(side="left", padx=10)
+Label(frame_search, text="Cari:").pack(side="left", padx=10)
 entry_search = Entry(frame_search)
 entry_search.pack(side="left", padx=10)
-Button(frame_search, text="Search", command=search_laptop).pack(side="left", padx=10)
+Button(frame_search, text="Cari", command=search_laptop).pack(side="left", padx=10)
 
 # Buttons in a horizontal layout
 frame_buttons = Frame(root)
 frame_buttons.pack(pady=10)
 
-Button(frame_buttons, text="Add Laptop", command=add_laptop).pack(side="left", padx=5)
-Button(frame_buttons, text="Update Laptop", command=update_laptop).pack(
+Button(frame_buttons, text="Tambah Laptop", command=add_laptop).pack(
     side="left", padx=5
 )
-Button(frame_buttons, text="Delete Laptop", command=delete_laptop).pack(
+Button(frame_buttons, text="Perbarui Laptop", command=update_laptop).pack(
     side="left", padx=5
 )
-Button(frame_buttons, text="Analyze Data", command=perform_analysis).pack(
+Button(frame_buttons, text="Hapus Laptop", command=delete_laptop).pack(
+    side="left", padx=5
+)
+Button(frame_buttons, text="Analisis Data", command=perform_analysis).pack(
     side="left", padx=5
 )
 
